@@ -19,7 +19,10 @@ func main() {
 		panic(err.Error())
 	}
 
-	provider.UploadSvc.CleanDangleUploads(ctx)
+	err = provider.UploadSvc.CleanDangleUploads(ctx)
+	if err != nil {
+		panic(err.Error())
+	}
 
 	provider.Logger.Info("Dangle uploads cleaned")
 }
