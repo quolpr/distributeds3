@@ -1,5 +1,4 @@
-begin;
-
+-- +goose Up
 create type upload_status as enum ('in_progress', 'done');
 
 create table uploads (
@@ -20,4 +19,8 @@ create table parts (
 	status upload_status not null
 );
 
-commit;
+-- +goose Down
+drop table parts;
+drop table uploads;
+
+drop type upload_status;

@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"errors"
+	"fmt"
 	"log/slog"
 	"net/http"
 	"time"
@@ -12,10 +13,16 @@ type App struct {
 	ServiceProvider *serviceProvider
 }
 
-func NewApp(ctx context.Context) *App {
-	return &App{
-		ServiceProvider: newServiceProvider(ctx),
+func NewApp(ctx context.Context) (*App, error) {
+	serviceProvider, err := newServiceProvider(ctx)
+
+	if err != nil {
+		return nil, fmt.Errorf("error while create service provider: %w", err)
 	}
+
+	return &App{
+		ServiceProvider: serviceProvider,
+	}, nil
 }
 
 func (app *App) Logger() *slog.Logger {
@@ -25,10 +32,12 @@ func (app *App) Logger() *slog.Logger {
 func (app *App) ServeHTTP(ctx context.Context) error {
 	logger := app.ServiceProvider.Logger
 
-	httpServer := &http.Server{
-		Addr:         ":8080",
-		ReadTimeout:  10 * time.Second,
-		WriteTimeout: 30 * time.Second,
+	port := ":8080"
+
+	httpServer := &http.Server{ //nolint:exhaustruct
+		Addr:         port,
+		ReadTimeout:  10 * time.Second, //nolint:gomnd
+		WriteTimeout: 30 * time.Second, //nolint:gomnd
 		Handler:      newRoutes(app.ServiceProvider),
 	}
 
@@ -36,9 +45,9 @@ func (app *App) ServeHTTP(ctx context.Context) error {
 	go func() {
 		defer close(serverErrorCh)
 
-		logger.Info("Server started", "port", 8080)
-		err := httpServer.ListenAndServe()
+		logger.Info("Server started", "port", port)
 
+		err := httpServer.ListenAndServe()
 		if err != nil && !errors.Is(err, http.ErrServerClosed) {
 			logger.Error("Server closing", "error", err)
 		}
@@ -55,9 +64,9 @@ func (app *App) ServeHTTP(ctx context.Context) error {
 	case err := <-serverErrorCh:
 		return err
 	case <-ctx.Done():
-		ctx, cancel := context.WithTimeout(context.Background(), time.Second*30)
+		ctx, cancel := context.WithTimeout(context.Background(), time.Second*30) //nolint:gomnd
 		defer cancel()
 		//nolint: contextcheck
-		return httpServer.Shutdown(ctx)
+		return httpServer.Shutdown(ctx) //nolint:wrapcheck
 	}
 }

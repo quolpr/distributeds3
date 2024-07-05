@@ -7,6 +7,8 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/jackc/pgx/v5/stdlib"
+	"github.com/pressly/goose/v3"
 	"github.com/quolpr/distributeds3/internal/config"
 	"github.com/quolpr/distributeds3/internal/httpapi/upload"
 	"github.com/quolpr/distributeds3/internal/queries/pg"
@@ -15,6 +17,7 @@ import (
 	uploadSvc "github.com/quolpr/distributeds3/internal/service/upload"
 	"github.com/quolpr/distributeds3/internal/service/upload/repo"
 	"github.com/quolpr/distributeds3/pkg/transaction"
+	"github.com/quolpr/distributeds3/postgresql"
 )
 
 type serviceProvider struct {
@@ -22,20 +25,20 @@ type serviceProvider struct {
 	UploadHandler *upload.Handlers
 }
 
-func newServiceProvider(ctx context.Context) *serviceProvider {
+func newServiceProvider(ctx context.Context) (*serviceProvider, error) {
 	config, err := config.FromEnv()
 
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("error while parse env config: %w", err)
 	}
 
-	postgresPool, err := providePostgresql(ctx, config.DbURL)
+	postgresPool, err := providePostgresql(ctx, config.DBURL)
 
 	if err != nil {
-		panic(err)
+		return nil, fmt.Errorf("error while connect to postgreSQL: %w", err)
 	}
-	queries := pg.NewTxQueries(pg.New(postgresPool))
 
+	queries := pg.NewTxQueries(pg.New(postgresPool))
 	storageService := storage.NewService(inmemstorage.NewInmemRepo())
 	partRepo := repo.NewPartRepo(queries)
 	uploadRepo := repo.NewUploadRepo(queries, partRepo)
@@ -44,10 +47,39 @@ func newServiceProvider(ctx context.Context) *serviceProvider {
 		transaction.New(postgresPool),
 	)
 
+	if err := goose.SetDialect("postgres"); err != nil {
+		return nil, fmt.Errorf("failed set goose dialect: %w", err)
+	}
+
+	conn := stdlib.OpenDBFromPool(postgresPool)
+	defer func() {
+		if err := conn.Close(); err != nil {
+			slog.Error("Failed to close connection", "err", err)
+		}
+	}()
+
+	goose.SetBaseFS(postgresql.EmbedMigrations)
+
+	if err := goose.Up(conn, "migrations"); err != nil {
+		return nil, fmt.Errorf("failed to migrate: %w", err)
+	}
+
+	connPgx, err := postgresPool.Acquire(ctx)
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to acquire connection: %w", err)
+	}
+
+	err = RegisterPostgresTypes(ctx, connPgx.Conn())
+
+	if err != nil {
+		return nil, fmt.Errorf("failed to register postgres types: %w", err)
+	}
+
 	return &serviceProvider{
 		Logger:        slog.Default(),
 		UploadHandler: upload.NewHandlers(uploadService),
-	}
+	}, nil
 }
 
 func providePostgresql(ctx context.Context, dbURL string) (*pgxpool.Pool, error) {
@@ -57,7 +89,6 @@ func providePostgresql(ctx context.Context, dbURL string) (*pgxpool.Pool, error)
 	}
 
 	databaseConfig.ConnConfig.DefaultQueryExecMode = pgx.QueryExecModeExec
-	databaseConfig.AfterConnect = registerPostgresTypes
 
 	pool, err := pgxpool.NewWithConfig(ctx, databaseConfig)
 	if err != nil {
@@ -72,7 +103,7 @@ func providePostgresql(ctx context.Context, dbURL string) (*pgxpool.Pool, error)
 	return pool, nil
 }
 
-func registerPostgresTypes(ctx context.Context, conn *pgx.Conn) error {
+func RegisterPostgresTypes(ctx context.Context, conn *pgx.Conn) error {
 	dataTypeNames := map[string]any{
 		"upload_status": pg.UploadStatus(""),
 	}

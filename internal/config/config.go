@@ -7,7 +7,7 @@ import (
 )
 
 type Config struct {
-	DbURL string `envconfig:"DB_URL" required:"true"`
+	DBURL string `envconfig:"DB_URL" required:"true"`
 }
 
 func FromEnv() (*Config, error) {

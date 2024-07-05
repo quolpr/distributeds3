@@ -13,11 +13,15 @@ func main() {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM, os.Interrupt)
 	defer stop()
 
-	app := app.NewApp(ctx)
+	app, err := app.NewApp(ctx)
+
+	if err != nil {
+		panic(err)
+	}
 
 	logger := app.Logger()
 
-	err := app.ServeHTTP(ctx)
+	err = app.ServeHTTP(ctx)
 	if err != nil {
 		logger.Error("Server closed", "error", err)
 
