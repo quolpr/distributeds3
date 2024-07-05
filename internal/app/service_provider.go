@@ -23,9 +23,10 @@ import (
 type serviceProvider struct {
 	Logger        *slog.Logger
 	UploadHandler *upload.Handlers
+	UploadSvc     *uploadSvc.Service
 }
 
-func newServiceProvider(ctx context.Context) (*serviceProvider, error) {
+func NewServiceProvider(ctx context.Context) (*serviceProvider, error) {
 	config, err := config.FromEnv()
 
 	if err != nil {
@@ -60,6 +61,8 @@ func newServiceProvider(ctx context.Context) (*serviceProvider, error) {
 
 	goose.SetBaseFS(postgresql.EmbedMigrations)
 
+	// NOTE: Usual migrations are migrating in different container on deploy
+	// But for easier docker-compose up I managed to put it here
 	if err := goose.Up(conn, "migrations"); err != nil {
 		return nil, fmt.Errorf("failed to migrate: %w", err)
 	}
@@ -79,6 +82,7 @@ func newServiceProvider(ctx context.Context) (*serviceProvider, error) {
 	return &serviceProvider{
 		Logger:        slog.Default(),
 		UploadHandler: upload.NewHandlers(uploadService),
+		UploadSvc:     uploadService,
 	}, nil
 }
 

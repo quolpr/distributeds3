@@ -28,10 +28,6 @@ func NewInmemRepo() *InmemRepo {
 	parts["http://localhost:8080"] = make(map[uuid.UUID][]byte)
 	parts["http://localhost:8081"] = make(map[uuid.UUID][]byte)
 	parts["http://localhost:8082"] = make(map[uuid.UUID][]byte)
-	parts["http://localhost:8083"] = make(map[uuid.UUID][]byte)
-	parts["http://localhost:8084"] = make(map[uuid.UUID][]byte)
-	parts["http://localhost:8085"] = make(map[uuid.UUID][]byte)
-	parts["http://localhost:8086"] = make(map[uuid.UUID][]byte)
 
 	return &InmemRepo{parts: parts}
 }

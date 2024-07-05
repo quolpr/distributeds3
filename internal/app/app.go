@@ -14,7 +14,7 @@ type App struct {
 }
 
 func NewApp(ctx context.Context) (*App, error) {
-	serviceProvider, err := newServiceProvider(ctx)
+	serviceProvider, err := NewServiceProvider(ctx)
 
 	if err != nil {
 		return nil, fmt.Errorf("error while create service provider: %w", err)
