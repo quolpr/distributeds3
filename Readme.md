@@ -1,4 +1,4 @@
-# How to use
+## How to use
 
 Start server:
 
@@ -8,20 +8,6 @@ make run
 
 It will run whole service in docker. It also will setup postgresql + will run migrations.
 The server will be started at 8080 port.
-
-## Curls
-
-Send file:
-```bash
-curl --location 'http://localhost:8080/uploads' \
---form 'file_size="211"' \
---form 'file=@"./test-file.txt"'
-```
-
-Get file:
-```bash
-curl --location 'http://localhost:8080/uploads/{id}'
-```
 
 ## Testing module
 
@@ -37,3 +23,18 @@ DB_URL="postgres://postgres:postgres@localhost:5432/postgres?sslmode=disable" go
 ```
 
 It should be put as CRON task.
+
+## Useful curls
+
+Send file:
+```bash
+curl --location 'http://localhost:8080/uploads' \
+--form 'file_size="211"' \
+--form 'file=@"./test-file.txt"'
+```
+
+Get file:
+```bash
+curl --location 'http://localhost:8080/uploads/{id}'
+```
+
