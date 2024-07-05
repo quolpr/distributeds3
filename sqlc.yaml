@@ -1,0 +1,28 @@
+version: "2"
+plugins:
+  - name: golang
+    wasm:
+      url: "https://downloads.sqlc.dev/plugin/sqlc-gen-go_1.2.0.wasm"
+      sha256: "965d73d22711eee3a210565e66f918b8cb831c5f5b612e680642a4a785dd1ca1"
+sql:
+  - engine: "postgresql"
+    queries: "postgresql/queries"
+    schema: "postgresql/migrations"
+    gen:
+      go:
+        sql_package: "pgx/v5"
+        package: "pg"
+        out: "internal/queries/pg"
+        emit_interface: true
+        overrides:
+          - db_type: "uuid"
+            go_type: "github.com/google/uuid.UUID"
+          - db_type: "uuid"
+            go_type: "github.com/google/uuid.UUID"
+            nullable: true
+          - db_type: "pg_catalog.timestamptz"
+            go_type: "time.Time"
+          - db_type: "pg_catalog.timestamptz"
+            go_type: "time.Time"
+            nullable: true
+
